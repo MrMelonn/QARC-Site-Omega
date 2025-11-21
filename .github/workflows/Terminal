@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QARC Terminal</title>
+  <style>
+    :root {
+      --bg: #0b0f0b;
+      --fg: #c8facc;
+      --dim: #6baf79;
+      --accent: #82ff9e;
+      --error: #ff6b6b;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 16px/1.5 "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    }
+    .frame {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .bezel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+    .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      box-shadow: 0 0 8px currentColor;
+    }
+    .dot.red { background: #ff5f56; }
+    .dot.yellow { background: #ffbd2e; }
+    .dot.green { background: #27c93f; }
+    .title {
+      margin-left: 6px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .screen {
+      flex: 1;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .line { display: block; margin: 2px 0; }
+    .muted { color: var(--dim); }
+    .error { color: var(--error); }
+    .ok { color: var(--accent); }
+    .prompt {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .caret {
+      display: inline-block;
+      width: 8px; height: 1.1em;
+      background: var(--accent);
+      margin-left: 2px;
+      animation: blink 1s steps(2, jump-none) infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    input.cmd {
+      flex: 1;
+      background: transparent;
+      color: var(--fg);
+      border: none;
+      outline: none;
+      font: inherit;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <div class="bezel">
+      <div class="header">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+        <span class="title">qarc: site-omega // private test terminal</span>
+      </div>
+
+      <div id="screen" class="screen" aria-live="polite">
+        <div style="text-align:center; margin: 40px 0;">
+          <img src="attachments/Gjv5HZEJfvakiSpGmfuYw.png" alt="QARC Symbol" style="max-width:240px; width:100%; height:auto;" />
+          <div style="margin-top:16px; font-weight:bold; font-size:18px; color:var(--accent);">
+            QARC TERMINAL
+          </div>
+          <div style="font-size:14px; color:var(--dim);">
+            RECOGNIZE. CONTAIN. RESTORE.
+          </div>
+        </div>
+      </div>
+
+      <div class="prompt">
+        <span class="muted">omega@test</span><span class="ok">:</span><span class="muted">~$</span>
+        <input id="input" class="cmd" type="text" spellcheck="false" autocomplete="off" autofocus placeholder="help — список команд" />
+        <span class="caret" aria-hidden="true"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const screen = document.getElementById('screen');
+    const input  = document.getElementById('input');
+
+    const now = new Date();
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    const intro = [
+      { t: 'muted', s: `// Date: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}` },
+      { t: 'muted', s: `// Timezone: ${tz}` },
+      { t: 'muted', s: '// Type help for available commands.' }
+    ];
+
+    const commands = {
+      help() {
+        return [
+          { t: 'ok', s: 'Available commands:' },
+          { t: 'muted', s: '  Guide        — операторский гайд' },
+          { t: 'muted', s: '  Updates Log  — журнал обновлений' }
+        ];
+      },
+      clear() {
+        screen.innerHTML = '';
+        return [];
+      }
+    };
+
+    function print(lines) {
+      lines.forEach(({t, s}) => {
+        const el = document.createElement('span');
+        el.className = `line ${t || ''}`;
+        el.textContent = s;
+        screen.appendChild(el);
+      });
+      screen.scrollTop = screen.scrollHeight;
+    }
+
+    function run(cmd) {
+      const token = cmd.trim().toLowerCase();
+      const promptLine = document.createElement('span');
+      promptLine.className = 'line';
+      promptLine.innerHTML = `<span class="muted">omega@test</span><span class="ok">:</span><span class="muted">~$</span> ${cmd}`;
+      screen.appendChild(promptLine);
+
+      if (!token) return;
+      if (commands[token]) {
+        const out = commands[token]();
+        if (Array.isArray(out)) print(out);
+      } else {
+        print([{ t: 'error', s: `Command not found: ${token}` }]);
+      }
+    }
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const value = input.value;
+        input.value = '';
+        run(value);
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        commands.clear();
+      }
+    });
+
+    window.addEventListener('load', () => print(intro));
+  </script>
+</body>
+</html>
