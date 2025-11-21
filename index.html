@@ -71,4 +71,96 @@
       width: 8px; height: 1.1em;
       background: var(--accent);
       margin-left: 2px;
-      animation: blink 1s steps(2, jump-none) infinite;}
+      animation: blink 1s steps(2, jump-none) infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    input.cmd {
+      flex: 1;
+      background: transparent;
+      color: var(--fg);
+      border: none;
+      outline: none;
+      font: inherit;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <div class="bezel">
+      <div class="header">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+        <span class="title">qarc: site-omega // private test terminal</span>
+      </div>
+
+      <div id="screen" class="screen" aria-live="polite"></div>
+
+      <div class="prompt">
+        <span class="muted">omega@test</span><span class="ok">:</span><span class="muted">~$</span>
+        <input id="input" class="cmd" type="text" spellcheck="false" autocomplete="off" autofocus placeholder="help — список команд" />
+        <span class="caret" aria-hidden="true"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const screen = document.getElementById('screen');
+    const input  = document.getElementById('input');
+
+    const commands = {
+      help() {
+        return [
+          { t: 'ok', s: 'Available commands:' },
+          { t: 'muted', s: '  Guide        — операторский гайд' },
+          { t: 'muted', s: '  Updates Log  — журнал обновлений' }
+        ];
+      },
+      clear() {
+        screen.innerHTML = '';
+        return [];
+      }
+    };
+
+    function print(lines) {
+      lines.forEach(({t, s}) => {
+        const el = document.createElement('span');
+        el.className = `line ${t || ''}`;
+        el.textContent = s;
+        screen.appendChild(el);
+      });
+      screen.scrollTop = screen.scrollHeight;
+    }
+
+    function run(cmd) {
+      const token = cmd.trim().toLowerCase();
+      const promptLine = document.createElement('span');
+      promptLine.className = 'line';
+      promptLine.innerHTML = `<span class="muted">omega@test</span><span class="ok">:</span><span class="muted">~$</span> ${cmd}`;
+      screen.appendChild(promptLine);
+
+      if (!token) return;
+      if (commands[token]) {
+        const out = commands[token]();
+        if (Array.isArray(out)) print(out);
+      } else {
+        print([{ t: 'error', s: `Command not found: ${token}` }]);
+      }
+    }
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const value = input.value;
+        input.value = '';
+        run(value);
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        commands.clear();
+      }
+    });
+  </script>
+</body>
+</html>
+
+
